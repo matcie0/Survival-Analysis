@@ -1,0 +1,1000 @@
+---
+title: "Sprawozdanie 1"
+author: "Mateusz Cieślak"
+date: "2025-11-10"
+output: 
+  pdf_document: 
+    latex_engine: xelatex
+    number_sections: true
+    toc: true
+toc: true
+lof: true
+lot: true
+lang: pl-PL
+header-includes:
+  - \usepackage{booktabs}
+  - \usepackage{longtable}
+  - \usepackage{array}
+  - \usepackage{float}
+  - \usepackage{graphicx}
+  - \usepackage{amsmath}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  dev = "quartz_pdf",
+  echo = TRUE,
+  cache = FALSE,
+  fig.pos = "H",
+  out.extra = ""
+  )
+```
+
+\vspace{1cm}
+
+Wykorzystane biblioteki: 
+
+```{r biblioteki, warning=FALSE}
+library(knitr)
+library(kableExtra)
+library(binom)
+
+
+```
+
+# Lista 1
+
+## Zadanie 1
+
+W tym zadaniu piszemy deklaracje czterech funkcji.
+
+**Funkcja gęstości:**
+
+$$
+f(t; \alpha, \beta, \gamma) = 
+\frac{\alpha \gamma}{\beta}
+\left( \frac{t}{\beta} \right)^{\alpha - 1}
+\exp\left(-\left( \frac{t}{\beta} \right)^{\alpha}\right)
+\left[1 - \exp\left(-\left( \frac{t}{\beta} \right)^{\alpha}\right)\right]^{\gamma - 1}
+$$
+**Dystrybuanta:**
+
+$$
+F(t; \alpha, \beta, \gamma) =
+\left[ 1 - \exp\left(-\left( \frac{t}{\beta} \right)^{\alpha}\right) \right]^{\gamma}
+$$
+
+**Funkcja kwantylowa:**
+
+$$
+Q(p; \alpha, \beta, \gamma) =
+\beta \left[ -\ln\left( 1 - p^{1/\gamma} \right) \right]^{1/\alpha}
+$$
+
+**Funkcja hazardu:**
+
+$$
+h(t; \alpha, \beta, \gamma) =
+\frac{f(t; \alpha, \beta, \gamma)}{1 - F(t; \alpha, \beta, \gamma)}
+$$
+```{r deklaracje_funkcji}
+
+# gęstość
+gestosc <- function(t, a, b, g) {
+  if (any(c(a, b, g) <= 0)) stop("Parametry a, b, g muszą być dodatnie (> 0).")
+  if (any(t < 0)) stop("Czas t musi być nieujemny (t >= 0).")
+  
+  ft <- (a * g / b) * ((t / b)^(a - 1)) *
+    exp(-(t / b)^a) * ((1 - exp(-(t / b)^a))^(g - 1))
+  
+  return(ft)
+}
+
+# dystrybuanta
+dystrybuanta <- function(t, a, b, g) {
+  if (any(c(a, b, g) <= 0)) stop("Parametry a, b, g muszą być dodatnie (> 0).")
+  if (any(t < 0)) stop("Czas t musi być nieujemny (t >= 0).")
+  
+  Ft <- (1 - exp(-(t / b)^a))^g
+  return(Ft)
+}
+
+# kwantyl
+kwantyl <- function(p, a, b, g) {
+  if (any(c(a, b, g) <= 0)) stop("Parametry a, b, g muszą być dodatnie (> 0).")
+  if (any(p < 0 | p > 1)) stop("Prawdopodobieństwa p muszą być w zakresie [0, 1].")
+  
+  Qt <- b * (-log(1 - p^(1 / g)))^(1 / a)
+  return(Qt)
+}
+
+# hazard (intensywność ryzyka)
+hazard <- function(t, a, b, g) {
+  if (any(c(a, b, g) <= 0)) stop("Parametry a, b, g muszą być dodatnie (> 0).")
+  if (any(t < 0)) stop("Czas t musi być nieujemny (t >= 0).")
+  
+  ft <- gestosc(t, a, b, g)
+  Ft <- dystrybuanta(t, a, b, g)
+  ht <- ft / (1 - Ft)
+  return(ht)
+}
+
+
+```
+
+## Zadanie 2
+
+W niniejszym zadaniu testujemy różne parametry, aby zilustrować różne kształty wykresów funkcji hazardu.
+
+```{r ilustracje_kształtów, echo=FALSE, fig.cap = "\\label{fig:hazard} Ilustracje hazardu dla różnych parametrów"}
+
+# Przygotowanie wektora czasu
+t <- seq(0, 10, length.out = 500)  
+
+# Podział okna na 2x2
+par(mfrow = c(2,2), mar=c(4,4,3,1))
+
+# 1. Malejący hazard
+plot(t, hazard(t, a = 0.5, b = 2, g = 0.75),
+     type="l", col="blue", lwd=2,
+     main=expression(atop("Malejący hazard",alpha==0.5*","~beta==2*","~gamma==0.75)),
+     xlab="t", ylab="h(t)")
+
+# 2. Stały hazard
+plot(t, hazard(t, a = 1, b = 2, g = 1),
+     type="l", col="red", lwd=2,
+     ylim = c(0,1),
+     main=expression(atop("Stały hazard",alpha==1*","~beta==2*","~gamma==1)),
+     xlab="t", ylab="h(t)")
+
+# 3. Rosnący hazard 
+plot(t, hazard(t, a = 3/4, b = 1, g = 2), 
+     type="l", col="darkgreen", lwd=2,
+     main=expression(atop("Asymetryczny dzwonkowy hazard",alpha==1.5*","~beta==2*","~gamma==2)),
+     xlab="t", ylab="h(t)")
+
+# 4. Kształt wannowy
+plot(t, hazard(t, a = 3/2, b = 4, g = 1/8),
+     type="l", col="purple", lwd=2,
+     main=expression(atop("Wannowy hazard",alpha==1.5*","~beta==4*","~gamma==1.8)),
+     xlab="t", ylab="h(t)")
+
+
+```
+
+## Zadanie 3
+
+Deklarujemy funkcję do generowania zmiennych z rozkładu $\mathcal{EW}(\alpha, \beta, \gamma)$.
+
+```{r funkcja_generowanie_zmiennych}
+generuj_EW <- function(n, a, b, g) {
+  u <- runif(n)
+  t <- kwantyl(u, a, b, g)
+  return(t)
+}
+```
+
+## Zadanie 4
+
+Będziemy analizować dwie trójki parametrów:
+
+- p1 = $(\alpha=1.5, \beta=2, \gamma=2)$  
+- p2 = $(\alpha=0.5, \beta=2, \gamma=0.75)$
+
+dla $n = 50$  i $n = 100$ obserwacji.
+
+Zobaczymy również jak ich gęstości wyglądają w porównaniu do teoretycznych gęstości.
+
+
+```{r porownanie_histogramow, echo=FALSE, fig.cap = "\\label{fig:histogramy_porownanie} Porównanie wygenerowanych histogramów do teoretycznych gęstości dla różnych parametrów"}
+parametry1 <- c(a = 1.5, b = 2, g = 2)
+parametry2 <- c(a = 0.5, b = 2, g = 0.75)
+
+probka1_50  <- generuj_EW(50,  parametry1["a"], parametry1["b"], parametry1["g"])
+probka1_100 <- generuj_EW(100, parametry1["a"], parametry1["b"], parametry1["g"])
+probka2_50  <- generuj_EW(50,  parametry2["a"], parametry2["b"], parametry2["g"])
+probka2_100 <- generuj_EW(100, parametry2["a"], parametry2["b"], parametry2["g"])
+
+par(mfrow = c(2,2)) 
+
+rysuj_histogram_gestosc <- function(n, parametry, probka) {
+  a <- parametry["a"]
+  b <- parametry["b"]
+  g <- parametry["g"]
+  
+  hist(probka, breaks = 10, probability = TRUE,
+       col = "deepskyblue",
+       main = paste0("EW(a=",a,",b=",b,",g=",g,") n=",n),
+       xlab = "t")
+  
+  t <- seq(min(probka), max(probka), length.out = 500)
+  lines(t, gestosc(t, a, b, g), col = "red", lwd = 2)
+}
+
+rysuj_histogram_gestosc(50, parametry1, probka1_50)
+rysuj_histogram_gestosc(100, parametry1, probka1_100)
+rysuj_histogram_gestosc(50, parametry2, probka2_50)
+rysuj_histogram_gestosc(100, parametry2, probka2_100)
+
+```
+
+Możemy zauważyć, że kształty histogramów są podobne do teoretycznych gęstości, szczególnie dla większego $n = 100$.
+
+## Zadanie 5
+
+Ponownie analizujemy próbki wygenerowane w poprzednim zadaniu dla różnych trójek parametrów
+
+- p1 = $(\alpha=1.5, \beta=2, \gamma=2)$  
+- p2 = $(\alpha=0.5, \beta=2, \gamma=0.75)$
+
+dla $n = 50$  i $n = 100$ obserwacji.
+
+Tym razem zobaczymy jak wyglądają statystyki opisowe wyznaczone na podstawie wygenerowanych danych
+w porównaniu z teoretycznymi wartościami.
+
+```{r tabelki_emp_teo, warning=FALSE, echo=FALSE}
+
+# Funkcja obliczająca statystyki
+oblicz_statystyki <- function(n, parametry, probka) {
+  a <- parametry["a"]
+  b <- parametry["b"]
+  g <- parametry["g"]
+  
+  # Empiryczne statystyki
+  mean_emp <- mean(probka)
+  median_emp <- median(probka)
+  sd_emp <- sd(probka)
+  q1_emp <- quantile(probka, 0.25)
+  q3_emp <- quantile(probka, 0.75)
+  min_emp <- min(probka)
+  max_emp <- max(probka)
+  range_emp <- max_emp - min_emp
+  
+  # Teoretyczne wartości z funkcji kwantylowej
+  median_theor <- kwantyl(0.5, a, b, g)
+  q1_theor <- kwantyl(0.25, a, b, g)
+  q3_theor <- kwantyl(0.75, a, b, g)
+  
+  dane_emp <- data.frame(
+    n = n,
+    a = a,
+    b = b,
+    g = g,
+    średnia = mean_emp,
+    mediana = median_emp,
+    sd = sd_emp,
+    q1 = q1_emp,
+    q3 = q3_emp,
+    rozstęp = range_emp,
+    min = min_emp,
+    max = max_emp
+  )
+  
+  dane_theor <- data.frame(
+    a = a,
+    b = b,
+    g = g,
+    mediana_t = median_theor,
+    q1_t = q1_theor,
+    q3_t = q3_theor
+  )
+  
+  return(list(empiryczne = dane_emp, teoretyczne = dane_theor))
+}
+
+empiryczne <- rbind(
+  oblicz_statystyki(50, parametry1, probka1_50)$empiryczne,
+  oblicz_statystyki(100, parametry1, probka1_100)$empiryczne,
+  oblicz_statystyki(50, parametry2, probka2_50)$empiryczne,
+  oblicz_statystyki(100, parametry2, probka2_100)$empiryczne
+)
+
+teoretyczne <- rbind(
+  oblicz_statystyki(1, parametry1, probka1_50)$teoretyczne,
+  oblicz_statystyki(1, parametry2, probka2_50)$teoretyczne
+)
+
+empiryczne <- round(empiryczne, 3)
+teoretyczne <- round(teoretyczne, 3)
+
+rownames(empiryczne) <- c("p1", "p1'", "p2", "p2'")
+rownames(teoretyczne) <- c("p1", "p2")
+
+
+colnames_latex <- c("", "n", "$ \\alpha $", "$ \\beta $", "$ \\gamma $", 
+                    "średnia", "mediana", "sd", "q1", "q3", 
+                    "rozstęp", "min", "max")
+
+kable(empiryczne, 
+      format = "latex",
+      caption = "Statystyki empiryczne prób z rozkładu Exponentiated-Weibull",
+      booktabs = TRUE,
+      escape = FALSE, 
+      col.names = colnames_latex ) %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"),
+    position = "center", 
+    font_size = 8)
+
+
+colnames_latex <- c("", "$ \\alpha $", "$ \\beta $", "$ \\gamma $", 
+                    "mediana teoretyczna", "q1 teoretyczny", "q3 teoretyczny")
+
+kable(teoretyczne, 
+      format = "latex", 
+      booktabs = TRUE,
+      escape = FALSE, 
+      col.names = colnames_latex,
+      caption = "Wartości teoretyczne rozkładu Exponentiated-Weibull") %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"),
+    position = "center", 
+    font_size = 8)
+
+```
+
+Zazwyczaj dla $n = 100$ wyniki są bliższe teoretycznych wartości.
+
+# Lista 2
+
+## Zadanie 1
+
+Poniżej znajdują się funkcje odpowiadające za generowanie zmiennych cenzurowanych z ogólnionego
+rozkładu wykładniczego w przypadku cenzurowania I typu, II typu i losowego.
+ 
+```{r generator_cenzurowanych}
+
+#kwantyl
+rGE <- function(n, l, a) {
+  if(any(c(n,l,a) <= 0)) stop("n, lambda i alpha muszą być > 0")
+  u <- runif(n)
+  x <- - (1 / l) * log(1 - u^(1/a))
+  return(x)
+}
+
+
+  generuj_typI <- function(n, l, a, t0, return_full = FALSE) {
+    if(t0 < 0) stop("t0 musi byc >= 0")
+    T <- rGE(n, l, a)
+    C <- rep(t0, n)
+    time <- pmin(T, C)              
+    delta <- as.integer(T <= C)  # 1 = zdarzenie zaobserwowane, 0 = cenzurowane   
+    out <- data.frame(time = time, delta = delta)   
+    if(return_full) out <- cbind(out, T = T, C = C)   
+    return(out)
+  }
+
+
+generuj_typII <- function(n, l, a, m, return_full = FALSE) {
+  if(m <= 0 || m > n) stop("m musi spełniać 1 <= m <= n")
+  T <- rGE(n, l, a)
+  T_sorted <- sort(T)
+  censor_time <- T_sorted[m]   # czas zatrzymania 
+  C <- rep(censor_time, n)
+  time <- pmin(T, C)
+  delta <- as.integer(T <= C)
+  out <- data.frame(time = time, delta = delta)
+  if(return_full) out <- cbind(out, T = T, C = C)
+  return(out)
+}
+
+generuj_losowo <- function(n, l, a, eta, return_full = FALSE) {
+  if(eta <= 0) stop("eta musi byc > 0")
+  T <- rGE(n, l, a)
+  rate <- 1 / eta
+  C <- rexp(n, rate = rate)
+  time <- pmin(T, C)
+  delta <- as.integer(T <= C)
+  out <- data.frame(time = time, delta = delta)
+  if(return_full) out <- cbind(out, T = T, C = C)
+  return(out)
+}
+
+```
+
+
+## Zadanie 2
+
+Korzystając z napisanych funkcji wygenerujemy po jednym
+zbiorze danych cenzurowanych z każdego typu z rozkładu $\mathcal{GE}(\lambda, \alpha)$ i sprawdzimy sensowne dla nich statystyki opisowe.
+
+```{r uzycie_funkcji, warning=FALSE, echo=FALSE }
+
+n<-100 
+l<-0.5 
+a<-1.5 
+t<-3 
+m<-60 
+eta<-2
+
+# Typ I
+typ1 <- generuj_typI(n, l, a, t)
+dane_typ1 <- data.frame(
+  liczba_obserwacji = n,
+  kompletne = sum(typ1$delta == 1),
+  cenzurowane = sum(typ1$delta == 0),
+  min = min(typ1$time),
+  Q1 = quantile(typ1$time, 0.25),
+  mediana = median(typ1$time),
+  Q3 = quantile(typ1$time, 0.75)
+)
+
+# Typ II
+typ2 <- generuj_typII(n, l, a, m)
+dane_typ2 <- data.frame(
+  liczba_obserwacji = n,
+  kompletne = sum(typ2$delta == 1),
+  cenzurowane = sum(typ2$delta == 0),
+  min = min(typ2$time),
+  Q1 = quantile(typ2$time, 0.25),
+  mediana = median(typ2$time),
+  Q3 = quantile(typ2$time, 0.75),
+  max = max(typ2$time)
+)
+
+# Losowe cenzurowanie 
+losowo <- generuj_losowo(n, l, a, eta)
+dane_losowo <- data.frame(
+  liczba_obserwacji = n,
+  kompletne = sum(losowo$delta == 1),
+  cenzurowane = sum(losowo$delta == 0),
+  min = min(losowo$time),
+  Q1 = quantile(losowo$time, 0.25),
+  mediana = median(losowo$time),
+  Q3 = quantile(losowo$time, 0.75),
+  max = max(losowo$time)
+)
+
+
+
+kable(dane_typ1, digits = 4, row.names = FALSE, caption = "Statystyki opisowe – cenzurowanie typu I")
+kable(dane_typ2, digits = 4, row.names = FALSE, caption = "Statystyki opisowe – cenzurowanie typu II")
+kable(dane_losowo, digits = 4, row.names = FALSE, caption = "Statystyki opisowe – cenzurowanie losowe")
+
+```
+
+Dla danych cenzurowanych $\min$ to czas pierwszego zaobserwowanego zdarzenia. Natomiast $\max$ w typie drugim to czas ostatniego niecenzurowanego zdarzenia, a w typie trzecim $\max$ może oznaczać zarówno czas zdarzenia jak i cenzury.
+
+
+## Zadanie 3
+
+W grupie otrzymującej lek A uzyskano następujące dane. U dziesięciu pacjentów remisja choroby
+nastąpiła w chwilach: 0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208, natomiast u pozostałych dzisięciu pacjentów w ciągu roku nie zaobserwowano remisji. W grupie otrzymującej lek B uzyskano następujące dane. U dziesięciu pacjentów remisja choroby
+nastąpiła w chwilach: 0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721, natomiast u pozostałych dzisięciu pacjentów w ciągu roku nie zaobserwowano remisji.
+
+Poniższa tabela \ref{tab:pacjenci} prezentuje statystyki opisowe dla tych danych.
+
+\vspace{1cm}
+
+```{r pacjenci, warning=FALSE, echo=FALSE}
+
+# Dane dla leku A
+remisja_A <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+               0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+cenzurowane_A <- rep(1, 10)  # 10 przypadków bez remisji
+delta_A <- c(rep(1, 10), rep(0, 10))
+time_A <- c(remisja_A, cenzurowane_A)  # rok = 1 – czas cenzorowania
+
+dane_A <- data.frame(time = time_A, delta = delta_A)
+
+# Statystyki opisowe dla leku A
+statystyki_A <- data.frame(
+  grupa = "Lek A",
+  liczba_obserwacji = length(time_A),
+  kompletne = sum(dane_A$delta == 1),
+  cenzurowane = sum(dane_A$delta == 0),
+  min = min(dane_A$time),
+  Q1 = quantile(dane_A$time, 0.25),
+  mediana = median(dane_A$time),
+  Q3 = quantile(dane_A$time, 0.75)
+)
+
+# Dane dla leku B
+  remisja_B <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+                 0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+cenzurowane_B <- rep(1, 10)
+delta_B <- c(rep(1, 10), rep(0, 10))
+time_B <- c(remisja_B, cenzurowane_B)
+
+dane_B <- data.frame(time = time_B, delta = delta_B)
+
+# Statystyki opisowe dla leku B
+statystyki_B <- data.frame(
+  grupa = "Lek B",
+  liczba_obserwacji = length(time_B),
+  kompletne = sum(dane_B$delta == 1),
+  cenzurowane = sum(dane_B$delta == 0),
+  min = min(dane_B$time),
+  Q1 = quantile(dane_B$time, 0.25),
+  mediana = median(dane_B$time),
+  Q3 = quantile(dane_B$time, 0.75)
+)
+
+# Połączenie w jedną tabelę
+statystyki <- rbind(statystyki_A, statystyki_B)
+
+# Ładne wyświetlenie tabeli
+kable(statystyki, digits = 4, row.names = FALSE, caption = "Statystyki opisowe dla grup A i B", label="tab:pacjenci") %>%
+  kable_styling(full_width = FALSE, position = "center", bootstrap_options = c("striped", "hover"))
+```
+
+Na podstawie $Q1$ i $mediany$ widzimy, że w grupie otrzymującej lek B remisja ogólnie występowała trochę szybciej, chociaż pierwsza remisja $min=0.0335$ wystąpiła szybciej w grupie przyjmującej lek A.
+
+# Lista 3
+
+
+## Zadanie 1
+
+Poniższe funkcje odpowiadają za oszacowanie średniego czasu oczekiwania i wyznaczenie realizacji przedziału ufności dla danych cenzurowanych typu I.
+
+```{r estymacja_i_przedzialy_kod1, warning=FALSE, echo=FALSE}
+events_A <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+              0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+events_B <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+              0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+
+n_total <- 20
+censored_count_A <- n_total - length(events_A)
+censored_count_B <- n_total - length(events_B)
+
+```
+
+```{r estymacja_i_przedzialy_funkcje, warning=FALSE}
+
+censor_time <- 1.0
+
+# Funkcja 1: estymacja theta i mu 
+oszacowanie_sredniego_czasu <- function(event_times, cens_count, censor_time) {
+  R <- length(event_times)
+  T_total <- sum(event_times) + cens_count * censor_time
+  theta_hat <- R / T_total
+  mu_hat <- 1 / theta_hat
+  list(theta_hat = theta_hat, mu_hat = mu_hat)
+}
+
+# Funkcja 2: realizacja przedzialow ufnosci typu I
+przedzial_ufnosci_cenzI <- function(r, n, t0, alpha = 0.05, metoda = "exact") {
+
+  ci_p <- binom.confint(x = r, n = n, conf.level = 1 - alpha, methods = metoda)
+  TL <- ci_p$lower
+  TU <- ci_p$upper
+  
+  TL_teta <- -log(1 - TL) / t0
+  TU_teta <- -log(1 - TU) / t0
+  
+  mu_lower <- 1 / TU_teta
+  mu_upper <- 1 / TL_teta
+  
+  return(data.frame(alpha = alpha, lower = mu_lower, upper = mu_upper))
+}
+
+```
+
+
+Tabela \ref{tab:mu1} 
+przedstawia oszacowanie $\hat{\vartheta}$ jak i również oszacowanie średniego czasu do remisji $\hat{\mu}$ dla obu leków.
+
+
+```{r mu1, echo=FALSE, warning=FALSE}
+A_est <- oszacowanie_sredniego_czasu(events_A, censored_count_A, censor_time)
+B_est <- oszacowanie_sredniego_czasu(events_B, censored_count_B, censor_time)
+
+alphas <- c(0.05, 0.01)
+
+A_ci <- do.call(rbind, lapply(alphas, function(a)
+  przedzial_ufnosci_cenzI(r = length(events_A), n = n_total, t0 = censor_time, alpha = a)))
+B_ci <- do.call(rbind, lapply(alphas, function(a)
+  przedzial_ufnosci_cenzI(r = length(events_B), n = n_total, t0 = censor_time, alpha = a)))
+
+rownames(A_ci) <- NULL
+rownames(B_ci) <- NULL
+
+# Tabela 1: oszacowania największej wiarogodności
+estymacje <- data.frame(
+  Grupa = c("Lek A", "Lek B"),
+  Theta_hat = c(A_est$theta_hat, B_est$theta_hat),
+  Mu_hat = c(A_est$mu_hat, B_est$mu_hat)
+)
+
+# Poprawka dla tabeli z estymacjami (Lek A, Lek B)
+kable(estymacje, 
+      digits = 5,
+      format = "latex",
+      booktabs = TRUE,
+      escape = FALSE, # Kluczowe dla interpretacji komend LaTeX
+      col.names = c("Grupa", "$\\hat{\\theta}$", "$\\hat{\\mu}$"),
+      caption = "Oszacowania parametrów rozkładu wykładniczego", 
+      label = "mu1") %>%
+  kable_styling(latex_options = c("striped", "hold_position"), 
+                full_width = FALSE)
+```
+
+
+Tabela \ref{tab:przedzialy_ufnosci} 
+przedstawia realizację przedziałów ufności dla średniego czasu do remisji choroby leku A i B dla $\alpha = 0.01$ i $\alpha = 0.05$.
+
+
+```{r przedzialy_ufnosci, echo=FALSE, warning=FALSE}
+# Tabela 2: przedziały ufności 
+A_ci_tbl <- data.frame(Grupa = "Lek A", A_ci)
+B_ci_tbl <- data.frame(Grupa = "Lek B", B_ci)
+cis <- rbind(A_ci_tbl, B_ci_tbl)
+rownames(cis) <- NULL
+
+kable(cis, 
+      digits = 4,
+      format = "latex",
+      booktabs = TRUE,
+      escape = FALSE, 
+      col.names = c("Grupa", "$\\alpha$", "dolna granica", "górna granica"),
+      caption = "Przedziały ufności dla średniego czasu do remisji choroby dla pacjentów leczonych lekiem A i B dla różnych poziomów $\\alpha$", 
+      label = "przedzialy_ufnosci") %>%
+  kable_styling(latex_options = c("striped", "hold_position"), 
+                full_width = FALSE)
+
+```
+
+
+## Zadanie 2
+
+W tym zadaniu zmieniamy czas cenzurowania z jedynki na czas zaobserwowania dziesiątej remisji czyli zmieniamy dane cenzurowane typu I na typ II.
+
+```{r typ2_kod1, warning=FALSE, echo=FALSE}
+events_A <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+              0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+events_B <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+              0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+
+n_total <- 20
+censored_count_A <- n_total - length(events_A)
+censored_count_B <- n_total - length(events_B)
+```
+
+```{r typ2_funkcje}
+# Funkcja 1: estymacja theta i mu 
+oszacowanie_sredniego_czasu <- function(event_times, cens_count) {
+  
+  # Zmiana czasu cenzurowania
+  censor_time<-max(event_times)
+  
+  R <- length(event_times)
+  T_total <- sum(event_times) + cens_count * censor_time
+  theta_hat <- R / T_total
+  mu_hat <- 1 / theta_hat
+  list(theta_hat = theta_hat, mu_hat = mu_hat)
+}
+
+# Funkcja 2: realizacja przedzialow ufnosci typu II.
+oszacowanie_typeII <- function(event_times, n_total, alpha = 0.05) {
+  m <- length(event_times)
+  n <- n_total
+  q_low <- qgamma(alpha/2, shape = m, rate = m)
+  q_up  <- qgamma(1 - alpha/2, shape = m, rate = m)
+  
+  suma <- sum(event_times) + event_times[m] * (n - m)
+  
+  TL <- m * q_low / suma
+  TU <- m * q_up  / suma
+  
+  MU <- 1/TL
+  ML <- 1/TU
+  
+  data.frame(
+    alpha = alpha,
+    lower = ML,
+    upper = MU
+  )
+}
+
+```
+
+```{r typ2_kod2, warning=FALSE, echo=FALSE}
+A_est <- oszacowanie_sredniego_czasu(events_A, censored_count_A)
+B_est <- oszacowanie_sredniego_czasu(events_B, censored_count_B)
+
+alphas <- c(0.05, 0.01)
+
+A_ci <- do.call(rbind, lapply(alphas, function(a)
+  oszacowanie_typeII(events_A, n_total, a)))
+B_ci <- do.call(rbind, lapply(alphas, function(a)
+  oszacowanie_typeII(events_B, n_total, a)))
+
+rownames(A_ci) <- NULL
+rownames(B_ci) <- NULL
+
+# Tabela 1: oszacowania największej wiarogodności
+estymacje <- data.frame(
+  Grupa = c("Lek A", "Lek B"),
+  Theta_hat = c(A_est$theta_hat, B_est$theta_hat),
+  Mu_hat = c(A_est$mu_hat, B_est$mu_hat)
+)
+
+kable(estymacje, 
+      digits = 5,
+      format = "latex",
+      booktabs = TRUE,
+      escape = FALSE, # Kluczowe dla interpretacji komend LaTeX
+      col.names = c("Grupa", "$\\hat{\\theta}$", "$\\hat{\\mu}$"),
+      caption = "Oszacowania parametrów rozkładu wykładniczego", 
+      label = "mu1") %>%
+  kable_styling(latex_options = c("striped", "hold_position"), 
+                full_width = FALSE)
+```
+
+
+```{r typ2_przedzialyufnosci, echo=FALSE}
+# Tabela 2: przedziały ufności 
+A_ci_tbl <- cbind(Grupa = "Lek A", A_ci)
+B_ci_tbl <- cbind(Grupa = "Lek B", B_ci)
+cis <- rbind(A_ci_tbl, B_ci_tbl)
+rownames(cis) <- NULL
+
+kable(cis, 
+      digits = 4,
+      format = "latex",
+      booktabs = TRUE,
+      escape = FALSE, 
+      col.names = c("Grupa", "$\\alpha$", "dolna granica", "górna granica"),
+      caption = "Przedziały ufności dla średniego czasu do remisji choroby dla pacjentów leczonych lekiem A i B dla różnych poziomów $\\alpha$", 
+      label = "przedzialy_ufnosci") %>%
+  kable_styling(latex_options = c("striped", "hold_position"), 
+                full_width = FALSE)
+```
+
+## Zadanie 3
+
+W tym zadaniu porównany dokładność estymatorów $\hat{\vartheta} = \frac{R}{T_1}$ oraz $\tilde{\vartheta} = \dfrac{-\log(1 - \tfrac{R}{n})}{t_0}$ poprzez sprawdzenie obciążeń i błędów średniokwadratowych. Wykonamy 10000 symulacji.
+
+
+```{r symulacja_i_porownanie, warning=FALSE, echo=FALSE}
+
+theta_true <- 1
+n_values <- c(10, 30)
+t0_values <- c(0.5, 1, 2)
+Nsim <- 10000
+```
+
+```{r funkcja_do_estymatorów}
+# Funkcja do obliczenia estymatorów dla jednej próby
+simulate_estimators <- function(n, t0, theta) {
+  X <- rexp(n, rate = theta)      
+  
+  # Dane cenzurowane typu I
+  R <- sum(X <= t0)               
+  T1 <- sum(X[X <= t0]) + t0 * (n - R)
+  
+  theta_hat <- R / T1
+  
+  if (R == n) {
+    theta_tilde <- 1 / mean(X)    
+    wszystkie_pelne <- TRUE
+  } else {
+    theta_tilde <- -log(1 - R/n) / t0
+    wszystkie_pelne <- FALSE
+  }
+  
+  return(c(theta_hat = theta_hat, theta_tilde = theta_tilde, wszystkie_pelne = wszystkie_pelne))
+}
+```
+
+```{r symulacja_hat_tilda, echo=FALSE, warning=FALSE}
+results <- expand.grid(n = n_values, t0 = t0_values)
+results$Bias_hat <- results$Bias_tilde <- results$MSE_hat <- results$MSE_tilde <- NA
+results$Full_cases <- NA
+
+set.seed(123)
+
+for (i in 1:nrow(results)) {
+  n <- results$n[i]
+  t0 <- results$t0[i]
+  
+  sim <- replicate(Nsim, simulate_estimators(n, t0, theta_true))
+  
+  theta_hat_vals <- sim["theta_hat", ]
+  theta_tilde_vals <- sim["theta_tilde", ]
+  wszystkie_pelne_count <- sum(sim["wszystkie_pelne", ])
+  
+  # Obciążenie i MSE
+  results$Bias_hat[i] <- mean(theta_hat_vals - theta_true)
+  results$Bias_tilde[i] <- mean(theta_tilde_vals - theta_true)
+  results$MSE_hat[i] <- mean((theta_hat_vals - theta_true)^2)
+  results$MSE_tilde[i] <- mean((theta_tilde_vals - theta_true)^2)
+  results$Full_cases[i] <- wszystkie_pelne_count
+}
+
+
+colnames_results <- c(
+  "$n$", 
+  "$t_0$", 
+  "$\\widetilde{MSE}$", 
+  "$\\widehat{MSE}$", 
+  "$\\tilde{b}$", 
+  "$\\hat{b}$", 
+  "Kompletne przypadki"
+)
+
+kable(results,
+      digits = 4,
+      format = "latex",
+      caption = "Porównanie dokładności estymatorów na podstawie obciążenia i błędu średniokwadratowego",
+      booktabs = TRUE,
+      escape = FALSE, 
+      col.names = colnames_results) %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"),
+    position = "center", 
+    font_size = 9) 
+
+```
+
+W przypadku $n = 10$ i $t_0 = 2.0$ estymator $\tilde{\vartheta}$ ma mniejsze obciążenie i błąd średniokwadratowy, ale we wszystkich pozostałych przypadkach to estymator $\hat{\vartheta}$ ma mniejsze obciążenie i błąd średniokwadratowy, więc można stwierdzić, że to właśnie $\hat{\vartheta}$ jest dokładniejszy.
+
+\vspace{1cm}
+
+# Lista 4
+
+## Zadanie 1
+
+```{r p_value, warning=FALSE}
+test_lrt_cenzI <- function(r, s, n, t0, theta0, typ = "dwustronny", alpha = 0.05) {
+  theta_hat <- r / (s + (n - r) * t0)
+  W <- 2 * (r * log(theta_hat / theta0) + (theta0 - theta_hat) * (s + (n - r) * t0))
+  
+  # wartość p
+  if (typ == "dwustronny") {
+    pval <- 1 - pchisq(W, df = 1)
+  } else if (typ == "prawostronny") {
+    pval <- if (theta_hat > theta0) 1 - pchisq(W, df = 1) else 1
+  } else if (typ == "lewostronny") {
+    pval <- if (theta_hat < theta0) 1 - pchisq(W, df = 1) else 1
+  } else stop("typ musi być 'dwustronny', 'prawostronny' lub 'lewostronny'")
+  
+  # poziom krytyczny
+  c_alpha <- qchisq(1 - alpha, df = 1)  
+  
+  list(theta_hat = theta_hat, statystyka = W, p_value = pval, krytyczny = c_alpha)
+}
+
+
+```
+
+
+## Zadanie 2
+
+W tym zadaniu wykonamy oszacowanie mocy dla 10 różnych alternatyw i oszacowanie rozmiaru testu. Poziom istotności ustalamy $\alpha = 0.05$, Hipotezę zerową jako $\theta_0 = 0.5$, natomiast czas obserwacji wybieramy $t_0 = 3$.
+
+```{r symulacja, warning=FALSE, echo=TRUE}
+symulacja_mocy <- function(n, t0, theta0, alternatywy, alpha = 0.05, B = 1000) {
+  
+  # Rozmiar testu (theta = theta0) 
+  odrzucenia_H0 <- 0
+  for (b in 1:B) {
+    dane <- generuj_typI(n, l = theta0, a = 1, t0 = t0)
+    r <- sum(dane$delta == 1)
+    s <- sum(dane$time[dane$delta == 1])
+    test <- test_lrt_cenzI(r, s, n, t0, theta0, typ = "dwustronny", alpha = alpha)
+    
+    if (test$statystyka > test$krytyczny) odrzucenia_H0 <- odrzucenia_H0 + 1
+  }
+  rozmiar_testu <- odrzucenia_H0 / B
+
+  # Moc testu dla alternatyw 
+  moc <- numeric(length(alternatywy))
+  
+  for (i in seq_along(alternatywy)) {
+    theta <- alternatywy[i]
+    odrzucenia <- 0
+    for (b in 1:B) {
+      dane <- generuj_typI(n, l = theta, a = 1, t0 = t0)
+      r <- sum(dane$delta == 1)
+      s <- sum(dane$time[dane$delta == 1])
+      test <- test_lrt_cenzI(r, s, n, t0, theta0, typ = "dwustronny", alpha = alpha)
+      
+      if (test$statystyka > test$krytyczny) odrzucenia <- odrzucenia + 1
+    }
+    moc[i] <- odrzucenia / B
+  }
+  
+  return(list(
+    rozmiar_testu = rozmiar_testu,
+    moc = moc,
+    alternatywy = alternatywy
+  ))
+}
+
+theta0 <- 0.5
+t0 <- 3
+alternatywy <- seq(0.2, 0.8, length.out = 10)  # 10 wybranych alternatyw
+B <- 1000
+
+set.seed(123)
+wyniki20 <- symulacja_mocy(n = 20, t0 = t0, theta0 = theta0, alternatywy = alternatywy, B = B)
+
+set.seed(123)
+wyniki50 <- symulacja_mocy(n = 50, t0 = t0, theta0 = theta0, alternatywy = alternatywy, B = B)
+```
+
+Rozmiar testu dla `n = 20` to `r wyniki20$rozmiar_testu`
+
+
+Tabela \ref{tab:tabelka_n_20} przedstawia oszacowanie mocy testu dla różnych alternatyw.
+
+```{r tabelka_n_20, warning=FALSE, echo=FALSE}
+moc20 <- data.frame(theta = wyniki20$alternatywy, moc_testu = wyniki20$moc)
+kable(moc20, digits = 3, caption = "Moc testu LRT dla n = 20") %>%
+  kable_styling(latex_options = "striped", font_size = 8)
+```
+
+Rozmiar testu dla `n = 50` to `r wyniki50$rozmiar_testu`
+
+Tabela \ref{tab:tabelka_n_50} przedstawia oszacowanie mocy testu dla różnych alternatyw.
+
+```{r tabelka_n_50, warning=FALSE, echo=FALSE}
+moc50 <- data.frame(theta = wyniki50$alternatywy, moc_testu = wyniki50$moc)
+kable(moc50, digits = 3, caption = "Moc testu LRT dla n = 50") %>%
+  kable_styling(latex_options = "striped", font_size = 8)
+
+```
+ 
+W obu przypadkach rozmiar testu jest bliski założonemu $\alpha = 0.05$, ale dla większego `n` jest bliżej. Możemy również zauważyć, że testy mają większą moc dla $\theta$, które są bardziej różne od wybranego przez nas $\theta_0 = 0.5$. Ponadto dla `n = 50` testy mają znacznie większą moc niż dla `n = 20`.
+ 
+## Zadanie 3 
+
+Zweryfikujemy hipotezę, że czas do remisji wynosi $\theta_0 = 1$. Poziom istotności ustalamy $\alpha = 0.05$, a o czasie obserwacji wiemy, że wynosił $t_0 = 1$.
+
+
+```{r weryfikacja, warning=FALSE, echo=FALSE}
+czas_A <- c(0.03345514, 0.08656403, 0.08799947, 0.24385821, 0.27755032,
+            0.40787247, 0.58825664, 0.64125620, 0.90679161, 0.94222208)
+delta_A <- c(rep(1, 10), rep(0, 10))
+time_A <- c(czas_A, rep(1, 10))  
+
+czas_B <- c(0.03788958, 0.12207257, 0.20319983, 0.24474299, 0.30492413,
+            0.34224462, 0.42950144, 0.44484582, 0.63805066, 0.69119721)
+delta_B <- c(rep(1, 10), rep(0, 10))
+time_B <- c(czas_B, rep(1, 10))
+
+
+rA <- sum(delta_A)
+sA <- sum(time_A[delta_A == 1])
+wynikA <- test_lrt_cenzI(rA, sA, n = length(time_A), t0 = 1, theta0 = 1, typ = "dwustronny", alpha = 0.05)
+
+rB <- sum(delta_B)
+sB <- sum(time_B[delta_B == 1])
+wynikB <- test_lrt_cenzI(rB, sB, n = length(time_B), t0 = 1, theta0 = 1, typ = "dwustronny", alpha = 0.05)
+
+porownanie <- data.frame(
+  Grupa = c("A", "B"),
+  Theta_hat = c(wynikA$theta_hat, wynikB$theta_hat),
+  Statystyka = c(wynikA$statystyka, wynikB$statystyka),
+  Krytyczny = c(wynikA$krytyczny, wynikB$krytyczny),
+  p_value = c(wynikA$p_value, wynikB$p_value),
+  Odrzucamy_H0 = c(wynikA$statystyka > wynikA$krytyczny,
+                   wynikB$statystyka > wynikB$krytyczny)
+)
+
+
+colnames_hipoteza <- c(
+  "Grupa", 
+  "$\\hat{\\theta}$", 
+  "Statystyka", 
+  "Wartość krytyczna", 
+  "$p$-value", 
+  "Odrzucamy $H_0$"
+)
+
+kable(porownanie, 
+      digits = 5,
+      format = "latex",
+      booktabs = TRUE,
+      escape = FALSE, 
+      col.names = colnames_hipoteza,
+      caption = "Weryfikacja hipotezy o średnim czasie do remisji w grupach A i B") %>%
+  kable_styling(
+    latex_options = c("striped", "hold_position"), 
+    font_size = 8)
+```
+
+W obu grupach p-wartość jest większa od ustalonego przez nas poziomu istotności $\alpha = 0.05$, zatem w żadnej z grup nie mamy podstaw do odrzucenia hipotezy zerowej.
