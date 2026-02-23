@@ -57,3 +57,33 @@ Estymatory Kaplana-Meiera i Fleminga-Harringtona, metoda Greenwooda, ogon BHK, t
 
 #### Wykorzystane biblioteki R:
 `survival`, `survminer`, `ggsurvfit`, `coin`, `ggplot2`.
+
+## Projekt 3: Modelowanie regresyjne i weryfikacja założeń
+
+Trzecia część portfolio skupia się na zaawansowanym modelowaniu wpływu zmiennych objaśniających na czas przeżycia. Projekt obejmuje implementację modeli parametrycznych, semiparametrycznych oraz procedury automatycznej selekcji zmiennych.
+
+**[Pobierz pełne Sprawozdanie w PDF](./survival-regression-models/raport3.pdf)**
+
+#### Zadania i zastosowane metody:
+
+* **Modele Przyspieszonego Czasu Awarii (AFT):**
+    * Implementacja modelu regresji parametrycznej z bazowym rozkładem **Weibulla**.
+    * Interpretacja współczynników za pomocą **Time Ratio (TR)** – analiza wpływu wieku, płci i skali ECOG na przyspieszenie lub opóźnienie momentu zdarzenia.
+    * Wyznaczanie predykcji prawdopodobieństwa przeżycia dla specyficznych profili pacjentów na podstawie parametrów kształtu i skali.
+* **Semiparametryczny Model Coxa (Proporcjonalnych Hazardów):**
+    * Estymacja parametrów modelu Coxa i interpretacja **Ilorazów Hazardu (Hazard Ratio - HR)**.
+    * Wyznaczanie bazowej funkcji przeżycia $S_0(t)$ oraz bazowej skumulowanej funkcji hazardu $H_0(t)$ metodą **Breslowa**.
+    * Weryfikacja założenia o proporcjonalności hazardów poprzez graficzną analizę równoległości logarytmów skumulowanych funkcji hazardu.
+* **Model Proporcjonalnych Szans (PO):**
+    * Implementacja modelu PO jako alternatywy dla modelu Coxa w sytuacjach, gdy wpływ cech na ryzyko słabnie w czasie.
+    * Interpretacja wyników za pomocą **Ilorazu Szans (Odds Ratio - OR)** i porównanie z modelem PH.
+* **Selekcja zmiennych i porównanie modeli:**
+    * Procedura budowy modelu optymalnego przy użyciu metody eliminacji wstecznej (**Backwards Elimination**) opartej na teście ilorazu wiarogodności (LRT).
+    * Wykorzystanie kryteriów informacyjnych **AIC** oraz **BIC** do automatycznej selekcji predyktorów.
+    * Analiza porównawcza predykcji modeli AFT, PH i PO na danych rzeczywistych.
+
+#### Narzędzia matematyczne:
+Regresja Weibulla (AFT), Model Proporcjonalnych Hazardów Coxa (PH), Model Proporcjonalnych Szans (PO), Estymator Breslowa, Test Walda, Test Ilorazu Wiarogodności (LRT), Kryteria AIC/BIC.
+
+#### Wykorzystane biblioteki R:
+`survival`, `survminer`, `timereg`, `eha`, `broom`, `knitr`.
